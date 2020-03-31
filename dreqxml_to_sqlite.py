@@ -3,7 +3,6 @@
 
 import argparse
 import os
-# import pprint
 import xml.etree.ElementTree as ET
 
 
@@ -56,13 +55,9 @@ def emit_table_definition(table):
                              'title TEXT')
     row_attributes = [a for a in row_attributes
                       if a.attrib['label'] not in principle_field_names]
-    # try:
     other_field_names, other_field_statements = zip(*[
         field_statement(row_attribute, lab_unique)
         for row_attribute in row_attributes])
-    # except RuntimeError as e:
-    #     print(e)
-    #     raise RuntimeError(name)
     field_names = principle_field_names + other_field_names
     field_statements = principle_field_stmts + other_field_statements
     create_stmt = ("CREATE TABLE {} (\n  {}\n  );\n"
@@ -104,7 +99,6 @@ def main():
     names, levels, stmts = zip(*table_create_stmts)
     table_defs = dict(zip(names, stmts))
     field_names, stmts = zip(*stmts)
-    # field_name_sets = [set(fn) for fn in field_names]
     ordered_names = zip(*sorted(zip(levels, names)))[1]
     data_doc = ET.parse(os.path.join(dreq_dir, 'dreqSupp.xml')).getroot()
     NS_PREF_DREQ = '{{urn:w3id.org:cmip6.dreq.dreq:a}}{}'
@@ -118,7 +112,6 @@ def main():
     for name in ordered_names:
         section = main.find(NS_PREF_DREQ.format(name))
         field_names = table_defs[name][0]
-        # print(table_defs[name][1])
         for item in section.findall(NS_PREF_DREQ.format('item')):
             v, cols, vals = field_insert_statement(item, field_names)
             print('INSERT INTO uids VALUES ("{}", "{}");'.format(
@@ -128,7 +121,6 @@ def main():
     for name in ordered_names:
         section = main.find(NS_PREF_DREQ.format(name))
         field_names = table_defs[name][0]
-        # print(table_defs[name][1])
         for item in section.findall(NS_PREF_DREQ.format('item')):
             v, cols, vals = field_insert_statement(item, field_names)
             print('INSERT INTO {} ({}) VALUES ({});'.format(
@@ -170,7 +162,6 @@ def main():
     for name in ordered_names:
         section = main.find(NS_PREF_DREQ.format(name))
         field_names = table_defs[name][0]
-        # print(table_defs[name][1])
         for item in section.findall(NS_PREF_DREQ.format('item')):
             v, cols, vals = field_insert_statement(item, field_names)
             print('INSERT INTO uids VALUES ("{}", "{}");'.format(
@@ -178,7 +169,6 @@ def main():
     for name in ordered_names:
         section = main.find(NS_PREF_DREQ.format(name))
         field_names = table_defs[name][0]
-        # print(table_defs[name][1])
         for item in section.findall(NS_PREF_DREQ.format('item')):
             v, cols, vals = field_insert_statement(item, field_names)
             print('INSERT INTO {} ({}) VALUES ({});'.format(
