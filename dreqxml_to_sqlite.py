@@ -38,7 +38,7 @@ def field_statement(row_attribute, lab_unique):
         if foreign_table in [None, '']:
             raise RuntimeError(
                 "Found foreign key with unspecified table {}".format(name))
-        constraint = (f'  REFERENCES {foreign_table} (uid)'
+        constraint = (f'  REFERENCES uids (uid)'
                       f'  -- Real table: {foreign_table}')
         field_stmt = "\n".join([field_stmt, constraint])
     return (name, field_stmt)
@@ -63,7 +63,6 @@ def format_table_definition(table):
     field_names = principle_field_names + other_field_names
     field_statements = principle_field_stmts + other_field_statements
     create_stmt = (f"CREATE TABLE {name} (\n  {{}}\n  );\n"
-                   # f"INSERT INTO {name} (uid) VALUES (null);\n"
                    "\n".format("\n  ,".join(field_statements)))
     return (name, level, (field_names, create_stmt))
 
