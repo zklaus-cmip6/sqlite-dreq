@@ -24,6 +24,8 @@ SQLITE_TYPES = {
 
 NS_PREFIX = '{urn:w3id.org:cmip6.dreq.dreq:a}'
 
+NS_PREF_DREQ = '{{urn:w3id.org:cmip6.dreq.dreq:a}}{}'
+
 
 def field_statement(row_attribute, lab_unique):
     name = row_attribute.attrib['label']
@@ -42,7 +44,7 @@ def field_statement(row_attribute, lab_unique):
     return (name, field_stmt)
 
 
-def emit_table_definition(table):
+def format_table_definition(table):
     name = table.attrib['label']
     # id = table.attrib['id']
     level = int(table.attrib['level'])
@@ -85,27 +87,31 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
-    dreq_dir = args.dreq_dir
-    doc = ET.parse(os.path.join(dreq_dir, 'dreq2Defn.xml')).getroot()
+def create_table_definitions_from_file(dreq_dir, filename):
+    doc = ET.parse(os.path.join(dreq_dir, filename)).getroot()
     tables = doc.findall('{urn:w3id.org:cmip6.dreq.framework:a}table')
     table_create_stmts = [
-        emit_table_definition(table) for table in tables]
-    doc = ET.parse(os.path.join(dreq_dir, 'dreqSuppDefn.xml')).getroot()
-    tables = doc.findall('{urn:w3id.org:cmip6.dreq.framework:a}table')
-    table_create_stmts += [
-        emit_table_definition(table) for table in tables]
+        format_table_definition(table) for table in tables]
+    return table_create_stmts
+
+
+def prepare_table_definitions(dreq_dir):
+    tables = [create_table_definitions_from_file(dreq_dir, filename)
+              for filename in ['dreq2Defn.xml', 'dreqSuppDefn.xml']]
+    table_create_stmts = sum(tables, [])
     names, levels, stmts = zip(*table_create_stmts)
     table_defs = dict(zip(names, stmts))
-    field_names, stmts = zip(*stmts)
-    ordered_names = zip(*sorted(zip(levels, names)))[1]
-    data_doc = ET.parse(os.path.join(dreq_dir, 'dreqSupp.xml')).getroot()
-    NS_PREF_DREQ = '{{urn:w3id.org:cmip6.dreq.dreq:a}}{}'
-    main = data_doc.find(NS_PREF_DREQ.format('main'))
+    return table_defs
+
+
+def emit_header():
     print("PRAGMA foreign_keys = ON;")
     print("CREATE TABLE uids (uid TEXT PRIMARY KEY, table_name TEXT);")
-    ordered_names = ['units']
+
+
+def emit_insertions(dreq_dir, filename, table_defs, ordered_names):
+    data_doc = ET.parse(os.path.join(dreq_dir, filename)).getroot()
+    main = data_doc.find(NS_PREF_DREQ.format('main'))
     for name in ordered_names:
         print(table_defs[name][1])
     print('BEGIN TRANSACTION;')
@@ -126,9 +132,19 @@ def main():
             print('INSERT INTO {} ({}) VALUES ({});'.format(
                 name, cols, vals))
     print('COMMIT TRANSACTION;')
-    data_doc = ET.parse(os.path.join(dreq_dir, 'dreq.xml')).getroot()
-    NS_PREF_DREQ = '{{urn:w3id.org:cmip6.dreq.dreq:a}}{}'
-    main = data_doc.find(NS_PREF_DREQ.format('main'))
+
+
+def main():
+    args = parse_args()
+    dreq_dir = args.dreq_dir
+
+    table_defs = prepare_table_definitions(dreq_dir)
+
+    emit_header()
+
+    ordered_names = ['units']
+    emit_insertions(dreq_dir, 'dreqSupp.xml', table_defs, ordered_names)
+
     ordered_names = (
         'remarks',
         'exptgroup',
@@ -156,24 +172,7 @@ def main():
         'timeSlice',
         'requestItem',
     )
-    for name in ordered_names:
-        print(table_defs[name][1])
-    print('BEGIN TRANSACTION;')
-    for name in ordered_names:
-        section = main.find(NS_PREF_DREQ.format(name))
-        field_names = table_defs[name][0]
-        for item in section.findall(NS_PREF_DREQ.format('item')):
-            v, cols, vals = field_insert_statement(item, field_names)
-            print('INSERT INTO uids VALUES ("{}", "{}");'.format(
-                v[0], name))
-    for name in ordered_names:
-        section = main.find(NS_PREF_DREQ.format(name))
-        field_names = table_defs[name][0]
-        for item in section.findall(NS_PREF_DREQ.format('item')):
-            v, cols, vals = field_insert_statement(item, field_names)
-            print('INSERT INTO {} ({}) VALUES ({});'.format(
-                name, cols, vals))
-    print('COMMIT TRANSACTION;')
+    emit_insertions(dreq_dir, 'dreq.xml', table_defs, ordered_names)
 
 
 if __name__ == '__main__':
