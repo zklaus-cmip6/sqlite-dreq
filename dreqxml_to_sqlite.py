@@ -41,7 +41,9 @@ def field_statement(row_attribute, lab_unique):
         constraint = (f'  REFERENCES uids (uid)'
                       f'  -- Real table: {foreign_table}')
         field_stmt = "\n".join([field_stmt, constraint])
-    return (name, field_stmt)
+    else:
+        foreign_table = None
+    return (name, field_stmt, foreign_table)
 
 
 def format_table_definition(table):
@@ -57,13 +59,18 @@ def format_table_definition(table):
                              'title TEXT')
     row_attributes = [a for a in row_attributes
                       if a.attrib['label'] not in principle_field_names]
-    other_field_names, other_field_statements = zip(*[
+    other_field_names, other_field_statements, other_relations = zip(*[
         field_statement(row_attribute, lab_unique)
         for row_attribute in row_attributes])
     field_names = principle_field_names + other_field_names
     field_statements = principle_field_stmts + other_field_statements
     create_stmt = (f"CREATE TABLE {name} (\n  {{}}\n  );\n"
                    "\n".format("\n  ,".join(field_statements)))
+    for field_name, foreign_table in zip(other_field_names, other_relations):
+        if foreign_table is not None:
+            create_stmt += ('INSERT INTO relations VALUES ('
+                            f'"{name}", "{field_name}", "{foreign_table}");\n')
+    create_stmt += '\n'
     return (name, level, (field_names, create_stmt))
 
 
@@ -113,6 +120,9 @@ def emit_header(out):
     out.write("PRAGMA foreign_keys = ON;\n")
     out.write("CREATE TABLE uids (uid TEXT PRIMARY KEY, table_name TEXT);\n")
     out.write("INSERT INTO uids VALUES (null, null);\n")
+    out.write("CREATE TABLE relations ("
+              "table_name TEXT, field_name TEXT, foreign_table TEXT);\n")
+    out.write("\n")
 
 
 def emit_table_defs(out, table_defs):
