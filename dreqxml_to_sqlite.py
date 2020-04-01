@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import logging
 import os
 import xml.etree.ElementTree as ET
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 SQLITE_TYPES = {
@@ -36,11 +40,13 @@ def field_statement(row_attribute, lab_unique):
     if is_foreign_key:
         foreign_table = row_attribute.attrib['techNote']
         if foreign_table in [None, '']:
-            raise RuntimeError(
+            logging.warning(
                 "Found foreign key with unspecified table {}".format(name))
-        constraint = (f'  REFERENCES uids (uid)'
-                      f'  -- Real table: {foreign_table}')
-        field_stmt = "\n".join([field_stmt, constraint])
+            foreign_table = None
+        else:
+            constraint = (f'  REFERENCES uids (uid)'
+                          f'  -- Real table: {foreign_table}')
+            field_stmt = "\n".join([field_stmt, constraint])
     else:
         foreign_table = None
     return (name, field_stmt, foreign_table)
