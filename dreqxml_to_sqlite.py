@@ -128,6 +128,9 @@ def emit_header(out):
 def emit_table_defs(out, table_defs):
     ordered_names = (
         'units',
+        'places',
+        'qcranges',
+        'transfers',
         'remarks',
         'exptgroup',
         'mip',
@@ -191,7 +194,11 @@ def main():
         emit_header(out)
         emit_table_defs(out, table_defs)
 
-        ordered_names = ('units',)
+        ordered_names = (
+            'units',
+            'places',
+            'transfers',
+        )
         emit_insertions(out,
                         dreq_dir, 'dreqSupp.xml', table_defs, ordered_names)
 
@@ -223,6 +230,12 @@ def main():
             'requestItem',
         )
         emit_insertions(out, dreq_dir, 'dreq.xml', table_defs, ordered_names)
+
+        ordered_names = (
+            'qcranges',
+        )
+        emit_insertions(out,
+                        dreq_dir, 'dreqSupp.xml', table_defs, ordered_names)
 
 
 if __name__ == '__main__':
