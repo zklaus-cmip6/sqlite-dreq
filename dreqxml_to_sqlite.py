@@ -52,7 +52,7 @@ def format_table_definition(table):
     row_attributes = table.findall(
         '{urn:w3id.org:cmip6.dreq.framework:a}rowAttribute')
     principle_field_names = ('uid', 'label', 'title')
-    principle_field_stmts = ('uid TEXT PRIMARY KEY',
+    principle_field_stmts = ('uid TEXT PRIMARY KEY REFERENCES uids (uid)',
                              'label TEXT',
                              'title TEXT')
     row_attributes = [a for a in row_attributes
