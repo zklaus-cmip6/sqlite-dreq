@@ -41,10 +41,14 @@ def get_foreign_key_relations(conn):
     return relations
 
 
-def build_field_statement(name, sql_type, is_primary_key, relation):
+def build_field_statement(name, sql_type,
+                          is_primary_key, relation, uid_ref=True):
     parts = [f'"{name}" {sql_type}']
     if is_primary_key:
-        parts.append("PRIMARY KEY REFERENCES uids (uid)")
+        if uid_ref:
+            parts.append("PRIMARY KEY REFERENCES uids (uid)")
+        else:
+            parts.append("PRIMARY KEY")
     if relation is not None:
         parts.append(f"REFERENCES {relation} (uid)")
     field_stmt = " ".join(parts)
@@ -85,10 +89,42 @@ def add_foreign_key_relations(conn):
         logging.warning(pprint.pformat(foreign_key_violations))
 
 
+def remove_uid_link(conn, table):
+    c = conn.cursor()
+    c.execute(f"PRAGMA foreign_key_list({table})")
+    relations = {fk[3]: fk[2] for fk in c.fetchall()}
+    relations.pop('uid', None)
+    c.execute(f"PRAGMA table_info({table})")
+    field_statements = [
+        build_field_statement(name, sql_type, is_primary_key,
+                              relations.get(name), uid_ref=False)
+        for (cid, name, sql_type, notnull, default, is_primary_key)
+        in c.fetchall()]
+    create_stmt = (f"CREATE TABLE new_{table} (\n  {{}}\n  );\n"
+                   "\n".format("\n  ,".join(field_statements)))
+    c.execute(create_stmt)
+    c.execute(f"INSERT INTO new_{table} SELECT * FROM {table};")
+    c.execute(f"DROP TABLE {table};")
+    c.execute(f"ALTER TABLE new_{table} RENAME TO {table};")
+    conn.commit()
+
+
+def drop_uids(conn):
+    c = conn.cursor()
+    c.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    for (name,) in c.fetchall():
+        if name == 'uids':
+            continue
+        remove_uid_link(conn, name)
+    c.execute("DROP TABLE uids;")
+    conn.commit()
+
+
 def main():
     args = parse_args()
     conn = sqlite3.connect(args.database)
     add_foreign_key_relations(conn)
+    drop_uids(conn)
     conn.close()
 
 
