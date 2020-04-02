@@ -13,6 +13,7 @@ logging.basicConfig(level=logging.INFO)
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--database', default='dreq.sqlite')
+    parser.add_argument('-k', '--keep-global-uid-table', action='store_true')
     return parser.parse_args()
 
 
@@ -124,7 +125,8 @@ def main():
     args = parse_args()
     conn = sqlite3.connect(args.database)
     add_foreign_key_relations(conn)
-    drop_uids(conn)
+    if not args.keep_global_uid_table:
+        drop_uids(conn)
     conn.close()
 
 
