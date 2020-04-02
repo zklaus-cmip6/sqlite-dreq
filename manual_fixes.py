@@ -48,14 +48,18 @@ def format_uid(uid):
 
 def add_first_version_to_standardnames(conn, standard_names):
     c = conn.cursor()
-    c.execute("BEGIN TRANSACTION")
     table = 'standardname'
     c.execute(f"PRAGMA table_info('{table}')")
+    fields = c.fetchall()
+    field_names = [f[1] for f in fields]
+    if 'first_version' in field_names:
+        return
     field_statements = [
         build_field_statement(name, sql_type, is_primary_key, None)
         for (cid, name, sql_type, notnull, default, is_primary_key)
-        in c.fetchall()]
+        in fields]
     field_statements.append('"first_version" INTEGER')
+    c.execute("BEGIN TRANSACTION")
     create_stmt = (f"CREATE TABLE new_{table} (\n  {{}}\n  );\n"
                    "\n".format("\n  ,".join(field_statements)))
     c.execute(create_stmt)
@@ -90,6 +94,11 @@ def fix_standard_names(conn, standard_names_file):
 
 def fix_request_items(conn):
     c = conn.cursor()
+    c.execute("SELECT COUNT(1) FROM sqlite_master "
+              "WHERE type='table' AND name='requestItemTarget';")
+    (count, ) = c.fetchone()
+    if count == 1:
+        return
     c.execute("BEGIN TRANSACTION;")
     c.execute('CREATE TABLE requestItemTarget '
               '("uid" TEXT PRIMARY KEY REFERENCES uids (uid), '
