@@ -110,6 +110,10 @@ def create_table_definitions_from_file(dreq_dir, filename):
     tables = doc.findall('{urn:w3id.org:cmip6.dreq.framework:a}table')
     table_create_stmts = [
         format_table_definition(table) for table in tables]
+    annex_tables = doc.findall(
+        '{urn:w3id.org:cmip6.dreq.framework:a}annextable')
+    table_create_stmts += [
+        format_table_definition(table) for table in annex_tables]
     return table_create_stmts
 
 
@@ -162,17 +166,18 @@ def emit_table_defs(out, table_defs):
         'grids',
         'timeSlice',
         'requestItem',
+        'tags',
+        'varRelations',
+        'varRelLnk',
     )
     for name in ordered_names:
         out.write(table_defs[name][1])
 
 
-def emit_insertions(out, dreq_dir, filename, table_defs, ordered_names):
-    data_doc = ET.parse(os.path.join(dreq_dir, filename)).getroot()
-    main = data_doc.find(NS_PREF_DREQ.format('main'))
+def emit_insertions_for_part(out, part, table_defs, ordered_names):
     out.write('BEGIN TRANSACTION;\n')
     for name in ordered_names:
-        section = main.find(NS_PREF_DREQ.format(name))
+        section = part.find(NS_PREF_DREQ.format(name))
         field_names = table_defs[name][0]
         for item in section.findall(NS_PREF_DREQ.format('item')):
             v, cols, vals = field_insert_statement(item, field_names)
@@ -181,13 +186,23 @@ def emit_insertions(out, dreq_dir, filename, table_defs, ordered_names):
     out.write('COMMIT TRANSACTION;\n')
     out.write('BEGIN TRANSACTION;\n')
     for name in ordered_names:
-        section = main.find(NS_PREF_DREQ.format(name))
+        section = part.find(NS_PREF_DREQ.format(name))
         field_names = table_defs[name][0]
         for item in section.findall(NS_PREF_DREQ.format('item')):
             v, cols, vals = field_insert_statement(item, field_names)
             out.write('INSERT INTO {} ({}) VALUES ({});\n'.format(
                 name, cols, vals))
     out.write('COMMIT TRANSACTION;\n')
+
+
+def emit_insertions(out, dreq_dir, filename, table_defs,
+                    ordered_names, annex_tables=None):
+    data_doc = ET.parse(os.path.join(dreq_dir, filename)).getroot()
+    main = data_doc.find(NS_PREF_DREQ.format('main'))
+    emit_insertions_for_part(out, main, table_defs, ordered_names)
+    if annex_tables is not None:
+        annex = data_doc.find(NS_PREF_DREQ.format('annex'))
+        emit_insertions_for_part(out, annex, table_defs, annex_tables)
 
 
 def main():
@@ -235,7 +250,13 @@ def main():
             'timeSlice',
             'requestItem',
         )
-        emit_insertions(out, dreq_dir, 'dreq.xml', table_defs, ordered_names)
+        annex_tables = (
+            'tags',
+            'varRelations',
+            'varRelLnk',
+        )
+        emit_insertions(out, dreq_dir, 'dreq.xml', table_defs,
+                        ordered_names, annex_tables)
 
         ordered_names = (
             'qcranges',
