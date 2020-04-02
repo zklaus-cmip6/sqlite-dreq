@@ -77,10 +77,15 @@ def add_foreign_key_relations_to_table(conn, table, relations):
 
 
 def add_foreign_key_relations(conn):
+    c = conn.cursor()
+    c.execute("SELECT COUNT(1) FROM sqlite_master "
+              "WHERE type='table' AND name='relations';")
+    (count, ) = c.fetchone()
+    if count == 0:
+        return
     relations = get_foreign_key_relations(conn)
     for table, table_relations in relations.items():
         add_foreign_key_relations_to_table(conn, table, table_relations)
-    c = conn.cursor()
     c.execute("PRAGMA foreign_key_check;")
     foreign_key_violations = c.fetchall()
     no_foreign_key_violations = len(foreign_key_violations)
@@ -88,6 +93,15 @@ def add_foreign_key_relations(conn):
         logging.warning(f"Found the following {no_foreign_key_violations} "
                         "foreign key violations:")
         logging.warning(pprint.pformat(foreign_key_violations))
+    c.execute("SELECT COUNT(1) FROM relations")
+    (count, ) = c.fetchone()
+    if count > 0:
+        logging.warning("The following relations were not addressed:")
+        c.execute("SELECT * FROM relations")
+        logging.warning(pprint.pformat(c.fetchall()))
+    else:
+        c.execute("DROP TABLE relations")
+    conn.commit()
 
 
 def remove_uid_link(conn, table):
