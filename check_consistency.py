@@ -47,9 +47,9 @@ def build_field_statement(name, sql_type,
     parts = [f'"{name}" {sql_type}']
     if is_primary_key:
         if uid_ref:
-            parts.append("PRIMARY KEY REFERENCES uids (uid)")
+            parts.append("PRIMARY KEY NOT NULL REFERENCES uids (uid)")
         else:
-            parts.append("PRIMARY KEY")
+            parts.append("PRIMARY KEY NOT NULL")
     if relation is not None:
         parts.append(f"REFERENCES {relation} (uid)")
     field_stmt = " ".join(parts)

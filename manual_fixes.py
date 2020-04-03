@@ -32,7 +32,7 @@ def fix_bacc_dbem1(conn):
 def build_field_statement(name, sql_type, is_primary_key, relation):
     parts = [f'"{name}" {sql_type}']
     if is_primary_key:
-        parts.append("PRIMARY KEY REFERENCES uids (uid)")
+        parts.append("PRIMARY KEY NOT NULL REFERENCES uids (uid)")
     if relation is not None:
         parts.append(f"REFERENCES {relation} (uid)")
     field_stmt = " ".join(parts)
@@ -101,7 +101,7 @@ def fix_request_items(conn):
         return
     c.execute("BEGIN TRANSACTION;")
     c.execute('CREATE TABLE requestItemTarget '
-              '("uid" TEXT PRIMARY KEY REFERENCES uids (uid), '
+              '("uid" TEXT PRIMARY KEY NOT NULL REFERENCES uids (uid), '
               '"kind" TEXT, '
               '"experiment" TEXT REFERENCES experiment (uid), '
               '"exptgroup" TEXT REFERENCES exptgroup (uid), '

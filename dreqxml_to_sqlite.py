@@ -60,7 +60,9 @@ def format_table_definition(table):
     row_attributes = table.findall(
         '{urn:w3id.org:cmip6.dreq.framework:a}rowAttribute')
     principle_field_names = ('uid', 'label', 'title')
-    principle_field_stmts = ('uid TEXT PRIMARY KEY REFERENCES uids (uid)',
+    principle_field_stmts = ('uid TEXT PRIMARY KEY '
+                             'NOT NULL '
+                             'REFERENCES uids (uid)',
                              'label TEXT',
                              'title TEXT')
     row_attributes = [a for a in row_attributes
@@ -128,8 +130,8 @@ def prepare_table_definitions(dreq_dir):
 
 def emit_header(out):
     out.write("PRAGMA foreign_keys = ON;\n")
-    out.write("CREATE TABLE uids (uid TEXT PRIMARY KEY, table_name TEXT);\n")
-    out.write("INSERT INTO uids VALUES (null, null);\n")
+    out.write("CREATE TABLE uids (uid TEXT PRIMARY KEY NOT NULL, "
+              "table_name TEXT);\n")
     out.write("CREATE TABLE relations ("
               "table_name TEXT, field_name TEXT, foreign_table TEXT);\n")
     out.write("\n")
